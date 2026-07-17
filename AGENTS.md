@@ -33,7 +33,7 @@ All project content must be written in English. This includes documentation, sou
 
 ## Safety
 
-Development and tests may run inside the user's active graphical session. Never close windows, terminate processes, switch workspaces, stop Hyprland, overwrite session state, or alter the live desktop unless the user explicitly authorizes that action.
+Development and tests may run inside the user's active graphical session. Never close windows, terminate processes, switch workspaces, stop the active compositor, overwrite session state, or alter the live desktop unless the user explicitly authorizes that action.
 
 Use mocks, fixtures, temporary state directories, dry-run modes, or isolated IPC adapters for automated tests. Real-environment tests must be explicit, reversible, and documented.
 
