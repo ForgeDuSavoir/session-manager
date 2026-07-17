@@ -303,6 +303,26 @@ Open conditions: <none for accepted milestones>
 
 A rejected record remains historical. A later evaluation appends a new record.
 
+```text
+Milestone: M0
+Source revision: uncommitted working tree based on 8471ab1eabf296b4ec222e7fe2631716eff257f5
+Status: accepted
+Evaluated at: 2026-07-17T16:18:43Z
+Evidence: RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true cargo fmt --all -- --check; cargo test --all-targets --all-features (6 passed); cargo clippy --all-targets --all-features -- -D warnings; RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --all-features; cargo build --all-targets --all-features (all passed)
+Specification trace: M0 scope and M0-A1--A4; technical specification, Testing strategy; ADR 0001, ADR 0009
+Open conditions: none
+```
+
+```text
+Milestone: M1
+Source revision: uncommitted working tree based on 8471ab1eabf296b4ec222e7fe2631716eff257f5
+Status: accepted
+Evaluated at: 2026-07-17T17:03:13Z
+Evidence: RUSTUP_TOOLCHAIN=stable CARGO_NET_OFFLINE=true cargo fmt --all -- --check; cargo build --all-targets --all-features; cargo test --all-targets --all-features (28 passed); cargo clippy --all-targets --all-features -- -D warnings; RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --all-features (all passed)
+Specification trace: M1 scope and M1-A1--A8; functional specification, technical specification Configuration, Profile and Session sections; ADR 0002 and ADR 0010
+Open conditions: none
+```
+
 ## Plan maintenance
 
 Implementation tasks follow milestone order. A contract change updates the authoritative specification and relevant ADR before the plan or code. Newly discovered work stays with the milestone that owns its contract. Concrete integration work is not moved into core milestones for convenience.

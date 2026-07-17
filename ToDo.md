@@ -64,50 +64,70 @@ Complete milestones in order. Each task must use the linked specification and mu
 
 References: [milestone](docs/implementation-plan.md#m0--safe-core-foundation), [acceptance](docs/implementation-plan.md#m0-acceptance), and [testing](docs/technical-specification.md#testing-strategy).
 
-- [ ] Create the Rust 2024 Cargo library and executable package.
-- [ ] Create domain, application, storage-port, adapter-contract, and interface modules with inward dependency direction.
-- [ ] Add architecture tests rejecting concrete platform types and dependencies in the core.
-- [ ] Pin the Rust toolchain and add formatting, linting, build, documentation, and all-target test commands.
-- [ ] Implement deterministic clock and UUID fakes.
-- [ ] Implement canonical temporary XDG roots, ownership sentinels, containment checks, and safe cleanup.
-- [ ] Add installed-adapter, display, compositor, user-bus, process-manager, home, and state trap endpoints.
-- [ ] Make library tests unable to construct production adapter discovery.
-- [ ] Add network-disabled CI for all M0 checks.
-- [ ] Evaluate every M0 acceptance criterion and append the acceptance record.
+- [x] Create the Rust 2024 Cargo library and executable package.
+- [x] Create domain, application, storage-port, adapter-contract, and interface modules with inward dependency direction.
+- [x] Add architecture tests rejecting concrete platform types and dependencies in the core.
+- [x] Pin the Rust toolchain and add formatting, linting, build, documentation, and all-target test commands.
+- [x] Implement deterministic clock and UUID fakes.
+- [x] Implement canonical temporary XDG roots, ownership sentinels, containment checks, and safe cleanup.
+- [x] Add installed-adapter, display, compositor, user-bus, process-manager, home, and state trap endpoints.
+- [x] Make library tests unable to construct production adapter discovery.
+- [x] Add network-disabled CI for all M0 checks.
+- [x] Evaluate every M0 acceptance criterion and append the acceptance record.
 
 ### M1 — Domain and configuration
 
 References: [milestone](docs/implementation-plan.md#m1--domain-and-configuration), [acceptance](docs/implementation-plan.md#m1-acceptance), [profiles](docs/functional-specification.md#profiles-and-tasks), and [configuration](docs/technical-specification.md#configuration).
 
-- [ ] Implement name-identified profiles with ordered desktop-entry lists, tasks with ordered parent-profile subsets, launch sources, session/checkpoint UUIDs, and sessions as logical workspace groups.
-- [ ] Implement running/paused lifecycle separately from the active-session role.
-- [ ] Implement generated naming and independent per-source numbering.
-- [ ] Implement unsigned 32-bit highest-live-plus-one allocation, lower-gap non-reuse, and `conflict.session_number_exhausted`.
-- [ ] Implement stopped-number reuse and pure number/name allocation from running and paused sessions only; uncommitted transaction candidates reserve nothing.
-- [ ] Enforce globally unique generated names across live sessions, rejecting delimiter-derived cross-source collisions with `conflict.session_name_collision` before mutation and without number skipping.
-- [ ] Implement profile rename propagation for every related running or paused session.
-- [ ] Implement task rename propagation for that task's running or paused sessions.
-- [ ] Implement collision validation before rename mutation.
-- [ ] Implement profile and task deletion guards for all live references.
-- [ ] Treat an explicit profile/task delete request as confirmation, expose no force/cascade field, and let interactive clients prompt only before sending the request.
-- [ ] Implement the finalized strict TOML schema and stable validation paths.
-- [ ] Implement the 1 MiB configuration, profile/task/desktop-entry count, name, desktop-entry ID, and lexical root-path bounds.
-- [ ] Implement zero-profile representation without a profiles array placeholder.
-- [ ] Implement the lossless TOML syntax document and smallest-boundary edits.
-- [ ] Implement exact-byte ETags and accepted file-identity checks.
-- [ ] Implement offline validation independently from daemon, runtime, and adapter access.
-- [ ] Implement the pure configuration-reload candidate diff/policy against a supplied runtime revision and live-reference snapshot.
-- [ ] Implement atomic configuration-file adoption with expected configuration ETag; defer mutation serialization and joint runtime-lock integration to M4.
-- [ ] Diff accepted and candidate configuration identity sets during reload; reject removal or apparent rename of any profile/task referenced by a running or paused session.
-- [ ] Permit reload additions, non-identity edits, and removal of unreferenced sources only after complete candidate validation and deletion/collision guards.
-- [ ] Add M1 reload-policy/storage tests for referenced/unreferenced removal, apparent rename, non-identity edits, concurrent file replacement, and all-or-nothing configuration adoption.
-- [ ] Add domain property and lifecycle-independent state-machine tests.
-- [ ] Add sequential FDS/QMK naming, rename, collision, reuse, and uncommitted-candidate fixtures, including profile `A-B` versus task `B` of profile `A`.
-- [ ] Add highest-live-plus-one, lower-gap non-reuse, maximum-number, exhaustion, and stopped-number fixtures.
-- [ ] Add configuration byte/count boundary and lexical root normalization fixtures.
-- [ ] Add noncanonical TOML fixtures and byte-range preservation tests for every CRUD operation.
-- [ ] Add missing, unreadable, symlink-replaced, inode-replaced, and byte-modified configuration tests.
-- [ ] Evaluate every M1 acceptance criterion and append the acceptance record.
+- [x] Implement name-identified profiles with ordered desktop-entry lists, tasks with ordered parent-profile subsets, launch sources, session/checkpoint UUIDs, and sessions as logical workspace groups.
+- [x] Implement running/paused lifecycle separately from the active-session role.
+- [x] Implement generated naming and independent per-source numbering.
+- [x] Implement unsigned 32-bit highest-live-plus-one allocation, lower-gap non-reuse, and `conflict.session_number_exhausted`.
+- [x] Implement stopped-number reuse and pure number/name allocation from running and paused sessions only; uncommitted transaction candidates reserve nothing.
+- [x] Enforce globally unique generated names across live sessions, rejecting delimiter-derived cross-source collisions with `conflict.session_name_collision` before mutation and without number skipping.
+- [x] Implement profile rename propagation for every related running or paused session.
+- [x] Implement task rename propagation for that task's running or paused sessions.
+- [x] Implement collision validation before rename mutation.
+- [x] Implement profile and task deletion guards for all live references.
+- [x] Treat an explicit profile/task delete request as confirmation, expose no force/cascade field, and let interactive clients prompt only before sending the request.
+- [x] Implement the finalized strict TOML schema and stable validation paths.
+- [x] Implement the 1 MiB configuration, profile/task/desktop-entry count, name, desktop-entry ID, and lexical root-path bounds.
+- [x] Implement zero-profile representation without a profiles array placeholder.
+- [x] Implement the lossless TOML syntax document and smallest-boundary edits.
+- [x] Implement exact-byte ETags and accepted file-identity checks.
+- [x] Implement offline validation independently from daemon, runtime, and adapter access.
+- [x] Implement the pure configuration-reload candidate diff/policy against a supplied runtime revision and live-reference snapshot.
+- [x] Implement atomic configuration-file adoption with expected configuration ETag; defer mutation serialization and joint runtime-lock integration to M4.
+- [x] Diff accepted and candidate configuration identity sets during reload; reject removal or apparent rename of any profile/task referenced by a running or paused session.
+- [x] Permit reload additions, non-identity edits, and removal of unreferenced sources only after complete candidate validation and deletion/collision guards.
+- [x] Add M1 reload-policy/storage tests for referenced/unreferenced removal, apparent rename, non-identity edits, concurrent file replacement, and all-or-nothing configuration adoption.
+- [x] Add domain property and lifecycle-independent state-machine tests.
+- [x] Add sequential FDS/QMK naming, rename, collision, reuse, and uncommitted-candidate fixtures, including profile `A-B` versus task `B` of profile `A`.
+- [x] Add highest-live-plus-one, lower-gap non-reuse, maximum-number, exhaustion, and stopped-number fixtures.
+- [x] Add configuration byte/count boundary and lexical root normalization fixtures.
+- [x] Add noncanonical TOML fixtures and byte-range preservation tests for every CRUD operation.
+- [x] Add missing, unreadable, symlink-replaced, inode-replaced, and byte-modified configuration tests.
+- [x] Evaluate every M1 acceptance criterion and append the acceptance record.
+
+#### M1 validation status
+
+These validation tasks track the M1 acceptance criteria separately from the implementation tasks above.
+
+- [x] Add initial domain fixtures for highest-live-plus-one allocation, first-number allocation, and delimiter-derived generated-name collision rejection.
+- [x] Add initial configuration fixtures for exact-byte ETags, strict unknown-field rejection, and semantic decoding into the domain model.
+- [x] Validate every profile/task count, name, root, desktop-entry, and file-size boundary with stable error paths.
+- [x] Validate lifecycle-independent session invariants, including running versus paused checkpoint state and active-session constraints.
+- [x] Validate stopped-number reuse, lower-gap non-reuse, maximum-number exhaustion, and no numbering effect from uncommitted transaction candidates.
+- [x] Validate profile rename propagation preserves session UUIDs, checkpoint UUIDs, numbers, lifecycle, active role, and immutable source snapshots.
+- [x] Validate task rename propagation preserves session UUIDs, checkpoint UUIDs, numbers, lifecycle, active role, and immutable source snapshots.
+- [x] Validate rename collision rejection is all-or-nothing and does not skip numbers.
+- [x] Validate profile and task deletion guards against every live running or paused reference.
+- [x] Validate zero-profile configuration is represented without a `profiles` array placeholder and reject an explicit empty placeholder.
+- [x] Validate lossless TOML byte-range preservation for every supported profile/task CRUD operation.
+- [x] Validate accepted file-identity conflict detection for missing, unreadable, symlink-replaced, inode-replaced, and byte-modified configuration files.
+- [x] Validate offline configuration checks perform no daemon, runtime, socket, adapter, display, compositor, user-bus, process-manager, or host-XDG access.
+- [x] Validate pure reload policy for referenced removal, apparent rename, unreferenced removal, additions, non-identity edits, collisions, and concurrent file replacement.
+- [x] Validate atomic configuration adoption leaves either the previous accepted document or the complete candidate, never a partial state.
 
 ### M2 — Runtime and opaque checkpoint storage
 
