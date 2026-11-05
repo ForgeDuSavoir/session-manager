@@ -576,6 +576,7 @@ fn switching_active_is_a_noop_and_revision_exhaustion_is_atomic() {
     f.persist(&state);
     let c = f.core();
     c.switch(s.id).unwrap();
+    code(c.deactivate(), "limit.exceeded");
     code(c.stop(s.id), "limit.exceeded");
     code(c.start("P"), "limit.exceeded");
     assert_eq!(

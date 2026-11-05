@@ -272,6 +272,51 @@ fn hidden_and_ineligible_high_priority_entries_mask_lower_files() {
 }
 
 #[test]
+fn explicitly_hidden_entries_may_omit_exec_but_still_mask_and_validate() {
+    let f = Fixture::new();
+    for (id, flag) in [
+        ("hidden.desktop", "Hidden=true"),
+        ("menu.desktop", "NoDisplay=true"),
+    ] {
+        f.installed(1, id, "Lower Visible", "");
+        let upper = f.installed(0, id, "Higher Hidden", "");
+        fs::write(
+            &upper,
+            format!("[Desktop Entry]\nType=Application\nName=Higher Hidden\n{flag}\n"),
+        )
+        .unwrap();
+    }
+    assert!(f.resolver().installed().unwrap().applications.is_empty());
+
+    f.project("P");
+    let local = f.local("P", "local.desktop", "Not Shown", "");
+    fs::write(
+        &local,
+        "[Desktop Entry]\nType=Application\nName=Not Shown\nNoDisplay=true\n",
+    )
+    .unwrap();
+    let c = f.core();
+    c.start("P").unwrap();
+    assert!(
+        c.applications(&f.resolver())
+            .unwrap()
+            .applications
+            .is_empty()
+    );
+
+    for invalid in [
+        "[Desktop Entry]\nType=Application\nName=Bad\nHidden=true\nExec=\n",
+        "[Desktop Entry]\nType=Application\nName=Bad\nNoDisplay=true\nTerminal=maybe\n",
+        "[Desktop Entry]\nType=Application\nName=Bad\nExec=\n",
+    ] {
+        code(
+            DesktopEntry::parse(invalid.as_bytes()),
+            "application.invalid_desktop_entry",
+        );
+    }
+}
+
+#[test]
 fn desktop_visibility_uses_exact_current_desktop_tokens() {
     let f = Fixture::new();
     f.installed(0, "only.desktop", "Only", "OnlyShowIn=KDE;GNOME;\n");

@@ -189,6 +189,82 @@ fn api_full_flow_restart_fallback_and_cli_compatible_results() {
 }
 
 #[test]
+fn deactivate_preserves_sessions_and_installed_only_apps_across_restart() {
+    let f = Fixture::new();
+    fs::create_dir(f.source.join("P")).unwrap();
+    let running = f.running();
+    let idle = f.call(&Command::Deactivate);
+    assert_eq!(
+        idle,
+        serde_json::json!({"revision":0,"active_session_id":null})
+    );
+    let a = f.call(&start("P"));
+    let a_id = Uuid::parse_str(a["session"]["id"].as_str().unwrap()).unwrap();
+    let b = f.call(&start("P"));
+    let b_id = Uuid::parse_str(b["session"]["id"].as_str().unwrap()).unwrap();
+    fs::create_dir_all(f.source.join("P/.session-manager/apps")).unwrap();
+    fs::write(
+        f.source.join("P/.session-manager/apps/a.desktop"),
+        "[Desktop Entry]\nType=Application\nName=Project\nExec=never-executed\n",
+    )
+    .unwrap();
+    assert_eq!(
+        f.call(&Command::Applications)["applications"][0]["name"],
+        "Project"
+    );
+    let neutral = f.call(&Command::Deactivate);
+    assert_eq!(
+        neutral,
+        serde_json::json!({"revision":3,"active_session_id":null})
+    );
+    assert_eq!(f.call(&Command::Deactivate), neutral);
+    assert_eq!(
+        f.call(&Command::Applications)["applications"][0]["name"],
+        "Installed"
+    );
+    let sessions = f.call(&Command::Sessions);
+    assert_eq!(sessions["sessions"].as_array().unwrap().len(), 2);
+    assert!(
+        sessions["sessions"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["active"] == false)
+    );
+    drop(running);
+    let _running = f.running();
+    assert_eq!(
+        f.call(&Command::Sessions)["active_session_id"],
+        serde_json::Value::Null
+    );
+    assert_eq!(
+        f.call(&Command::Switch { session_id: a_id })["session"]["active"],
+        true
+    );
+    assert_eq!(
+        f.call(&Command::Applications)["applications"][0]["name"],
+        "Project"
+    );
+    f.call(&Command::Stop { session_id: b_id });
+    assert_eq!(
+        f.call(&Command::Sessions)["active_session_id"],
+        a_id.to_string()
+    );
+    let bad = serde_json::json!({"protocol_version":2,"request_id":Uuid::nil(),
+        "method":"session.deactivate","params":{"session_id":a_id}});
+    let mut conn = UnixStream::connect(f.locations.runtime.join("ipc-v2.sock")).unwrap();
+    conn.write_all(&canonical_json::encode_line(&bad).unwrap())
+        .unwrap();
+    let mut reply = String::new();
+    conn.read_to_string(&mut reply).unwrap();
+    assert_eq!(
+        serde_json::from_str::<serde_json::Value>(&reply).unwrap()["error"]["code"],
+        "validation.invalid_request"
+    );
+    assert_eq!(f.call(&Command::Sessions)["revision"], 5);
+}
+
+#[test]
 fn strict_requests_reject_unknown_fields_types_versions_and_duplicate_keys_without_mutation() {
     let f = Fixture::new();
     fs::create_dir(f.source.join("P")).unwrap();
@@ -491,6 +567,7 @@ fn cli_grammar_matches_the_closed_inventory_and_escapes_names_as_data() {
     for args in [
         vec!["project", "list", "--json"],
         vec!["--json", "session", "start", "Name With Spaces"],
+        vec!["session", "deactivate", "--json"],
         vec![
             "project",
             "create",
@@ -509,6 +586,7 @@ fn cli_grammar_matches_the_closed_inventory_and_escapes_names_as_data() {
     for args in [
         vec!["daemon", "--json"],
         vec!["session", "pause", "x"],
+        vec!["session", "deactivate", "unexpected"],
         vec!["project", "create", "--base-name", "A"],
         vec!["project", "list", "extra"],
         vec!["session", "stop", "not-a-uuid"],

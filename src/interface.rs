@@ -95,6 +95,7 @@ pub enum Command {
     Switch {
         session_id: Uuid,
     },
+    Deactivate,
     Stop {
         session_id: Uuid,
     },
@@ -104,7 +105,11 @@ impl Command {
     pub fn mutates(&self) -> bool {
         matches!(
             self,
-            Self::Create { .. } | Self::Start { .. } | Self::Switch { .. } | Self::Stop { .. }
+            Self::Create { .. }
+                | Self::Start { .. }
+                | Self::Switch { .. }
+                | Self::Deactivate
+                | Self::Stop { .. }
         )
     }
     pub fn request(&self, request_id: Uuid) -> Value {
@@ -127,6 +132,7 @@ impl Command {
                 "session.switch",
                 serde_json::json!({"session_id":session_id}),
             ),
+            Self::Deactivate => ("session.deactivate", serde_json::json!({})),
             Self::Stop { session_id } => {
                 ("session.stop", serde_json::json!({"session_id":session_id}))
             }
@@ -175,12 +181,14 @@ fn decode(value: Value) -> Result<(Uuid, Command)> {
         return Err(Error("validation.invalid_request"));
     }
     let command = match e.method.as_str() {
-        "project.list" | "template.list" | "session.list" | "application.list" => {
+        "project.list" | "template.list" | "session.list" | "session.deactivate"
+        | "application.list" => {
             params::<Empty>(e.params)?;
             match e.method.as_str() {
                 "project.list" => Command::Projects,
                 "template.list" => Command::Templates,
                 "session.list" => Command::Sessions,
+                "session.deactivate" => Command::Deactivate,
                 _ => Command::Applications,
             }
         }
@@ -267,6 +275,7 @@ impl Service {
             Command::Start { project_name } => to_value(self.core.start_result(&project_name)?)?,
             Command::Switch { session_id } => to_value(self.core.switch_result(session_id)?)?,
             Command::Stop { session_id } => to_value(self.core.stop_result(session_id)?)?,
+            Command::Deactivate => to_value(self.core.deactivate()?)?,
             Command::Applications => to_value(self.core.applications(&self.resolver)?)?,
         };
         Ok(value)

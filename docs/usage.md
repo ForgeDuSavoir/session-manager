@@ -48,10 +48,11 @@ session-manager --json session start Work-1
 session-manager session list
 session-manager --json application list
 session-manager session switch UUID_FROM_START
+session-manager session deactivate  # neutral context, session stays open
 session-manager session stop UUID_FROM_START
 ```
 
-Replace `UUID_FROM_START` with the returned UUID. Switching does not stop other sessions. Stop removes logical state only, never project files or external applications. No compositor, browser, launcher or adapter needs to be installed. `session-manager --help` lists commands without contacting the daemon.
+Replace `UUID_FROM_START` with the returned UUID. Switching or deactivating does not stop other sessions. Deactivation clears the active role and restores installed-only application listing; repeated calls do not change the revision. Stop removes logical state only, never project files or external applications. The core cannot check for compositor windows before a direct CLI/API stop; any graphical window guard is a downstream policy. No compositor, browser, launcher or adapter needs to be installed. `session-manager --help` lists commands without contacting the daemon.
 
 `--json` may precede the command or follow its complete arguments. It prints exactly the API result object, or an error object with `code`, followed by LF. Command arguments are literal data, not shell commands; quote names containing spaces in your shell. Human output is readable JSON but is not a parsing contract. Exit status is 0 for success/help/version, 1 for startup/API/transport/output errors, and 2 for invalid CLI syntax.
 
@@ -61,7 +62,7 @@ Ctrl-C or SIGTERM requests graceful daemon shutdown: stop accepting connections,
 
 The empty `Default Profile` template is built in; **do not create a filesystem template with that reserved name**. Custom templates are immediate real directories under `${XDG_CONFIG_HOME:-$HOME/.config}/session-manager/profile-template/`. For example, create `profile-template/Notes/README.md`, then select `--template Notes`. Creation chooses the first free numbered project directory, never merges, and applies the [safe-copy limits](technical-specification.md#templates-and-project-creation). Template files are never executed.
 
-Application listing uses the daemon's XDG data roots, not the client's environment. Edit the active project's `.session-manager/apps/exclude.txt` or local `.desktop` files to customize the next query. See [application resolution](technical-specification.md#application-resolution) for the exact formats, precedence, strict validation and bounds. A malformed selected installed or local entry fails the query; it is not silently skipped. Even hidden entries must satisfy the discovery schema. Installed symlinks are skipped; project-local symlinks are rejected. There is no locale translation or exhaustive vendor-extension compatibility guarantee.
+Application listing uses the daemon's XDG data roots, not the client's environment. Edit the active project's `.session-manager/apps/exclude.txt` or local `.desktop` files to customize the next query. See [application resolution](technical-specification.md#application-resolution) for the exact formats, precedence, strict validation and bounds. A malformed selected installed or local entry fails the query; it is not silently skipped. Entries with `Hidden=true` or `NoDisplay=true` may omit `Exec`, but must satisfy all other discovery validation; a visible entry still requires a nonempty `Exec`. Installed symlinks are skipped; project-local symlinks are rejected. There is no locale translation or exhaustive vendor-extension compatibility guarantee.
 
 Changes to installed/project files are observed on the next request without restarting. Missing projects/no active session yield installed-only apps; same-name replacement directories supply new context. There is no filesystem-wide atomic snapshot or persisted application list.
 

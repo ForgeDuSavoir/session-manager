@@ -36,6 +36,8 @@ References: [C1 scope and acceptance](docs/implementation-plan.md#c1--projects-t
 
 ## C2 — Current application lists
 
+- [x] Follow-up for real installed data: allow a missing `Exec` only on explicit `Hidden=true` or `NoDisplay=true` entries while validating every other field; test high-priority masking, local overrides, and malformed hidden files. This does not retroactively change the original C2 acceptance record.
+
 References: [C2 scope and acceptance](docs/implementation-plan.md#c2--current-application-list). **Accepted:** [C2 evidence](docs/reviews/c2-acceptance.md), 79 passing tests normally and sandboxed (36 new C2 fixtures); daemon/API/CLI integration remains C3 work.
 
 - [x] Implement bounded Linux XDG desktop-entry discovery using explicit test XDG roots, without a launcher dependency or executing applications.
@@ -51,6 +53,12 @@ References: [C3 scope and acceptance](docs/implementation-plan.md#c3--public-acc
 - [x] Test full project-create → session-start → app-list → switch/stop flows, no-active/missing-project fallback, restart, concurrent and malformed requests, bounded replies, and the C0 clean-break/version policy using temporary sockets/config/state/XDG roots.
 - [x] Document installation, the incompatible upgrade and unsupported session rollback, and one generic launcher-client example. Do not require Hyprland, a browser, or a particular launcher for release.
 - [x] Run formatting, linting, build, docs, and isolated tests with host desktop, installed adapters, home, and XDG access trapped and network disabled; evaluate and record C3 acceptance. Release may proceed without L1 or L2.
+
+## Additive neutral-context operation (after C3)
+
+- [x] Add and specify `session.deactivate`: clear only the active role, preserve open sessions, keep repeat calls revision-stable, return installed-only applications, and test API/CLI/restart behavior with isolated fixtures. See [ADR 0014](docs/decisions/0014-deactivate-the-active-session-without-stopping-it.md).
+- [x] Integrate and install an updated reproducible downstream build from the pinned revision plus two reviewed patches; the live daemon was restarted in a controlled way after authorization, and serves the new method. Desktop workspace/scratchpad mapping and graphical stop guards belong to `linux-setup`, not the core.
+- [ ] Publish the core change, then update the pinned GitHub revision and remove the temporary downstream patches after publication.
 
 ## Later, independently scheduled
 

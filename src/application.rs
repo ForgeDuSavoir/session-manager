@@ -56,6 +56,11 @@ pub struct StopMutation {
     pub stopped_session_id: Uuid,
 }
 #[derive(Debug, Clone, Serialize)]
+pub struct DeactivateMutation {
+    pub revision: u64,
+    pub active_session_id: Option<Uuid>,
+}
+#[derive(Debug, Clone, Serialize)]
 pub struct SessionList {
     pub revision: u64,
     pub active_session_id: Option<Uuid>,
@@ -263,6 +268,28 @@ impl<U: UuidGenerator> Core<U> {
         Ok(SessionMutation {
             revision: state.revision,
             session: view(state, &session),
+        })
+    }
+    /// Clear the active role without stopping any running session.
+    /// Repeating this operation while already neutral does not commit a revision.
+    pub fn deactivate(&self) -> Result<DeactivateMutation> {
+        let mut inner = self.lock()?;
+        let mut next = inner
+            .state
+            .clone()
+            .ok_or(Error("recovery.invalid_runtime"))?;
+        if next.active_session_id.is_some() {
+            next.active_session_id = None;
+            next.next_revision()?;
+            commit(&mut inner, next, &mut NoFault)?;
+        }
+        let state = inner
+            .state
+            .as_ref()
+            .ok_or(Error("recovery.invalid_runtime"))?;
+        Ok(DeactivateMutation {
+            revision: state.revision,
+            active_session_id: state.active_session_id,
         })
     }
     pub fn stop(&self, id: Uuid) -> Result<()> {

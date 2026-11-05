@@ -31,17 +31,6 @@ impl DesktopEntry {
             return Err(INVALID);
         }
         let name = string("Name")?.filter(|s| !s.is_empty()).ok_or(INVALID)?;
-        let exec = string("Exec")?.filter(|s| !s.is_empty()).ok_or(INVALID)?;
-        let icon = string("Icon")?;
-        let try_exec = string("TryExec")?;
-        if [&name, &exec]
-            .into_iter()
-            .chain(icon.as_ref())
-            .chain(try_exec.as_ref())
-            .any(|s| s.len() > 4096)
-        {
-            return Err(Error("limit.exceeded"));
-        }
         let boolean = |key| -> Result<bool> {
             match main.get(key).copied() {
                 None | Some("false") => Ok(false),
@@ -61,6 +50,23 @@ impl DesktopEntry {
         ] {
             boolean(key)?;
         }
+        let hidden = boolean("Hidden")?;
+        let no_display = boolean("NoDisplay")?;
+        let exec = match string("Exec")? {
+            Some(value) if !value.is_empty() => value,
+            None if hidden || no_display => String::new(),
+            _ => return Err(INVALID),
+        };
+        let icon = string("Icon")?;
+        let try_exec = string("TryExec")?;
+        if [&name, &exec]
+            .into_iter()
+            .chain(icon.as_ref())
+            .chain(try_exec.as_ref())
+            .any(|s| s.len() > 4096)
+        {
+            return Err(Error("limit.exceeded"));
+        }
         if main.contains_key("OnlyShowIn") && main.contains_key("NotShowIn") {
             return Err(INVALID);
         }
@@ -70,8 +76,8 @@ impl DesktopEntry {
             exec,
             icon,
             terminal: boolean("Terminal")?,
-            hidden: boolean("Hidden")?,
-            no_display: boolean("NoDisplay")?,
+            hidden,
+            no_display,
             only_show_in: list("OnlyShowIn")?,
             not_show_in: list("NotShowIn")?.unwrap_or_default(),
             try_exec,

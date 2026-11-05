@@ -19,7 +19,7 @@ use std::{
     },
 };
 
-pub const HELP: &str = "Session Manager (protocol 2)\n\nUsage: session-manager [--json] COMMAND\n  daemon\n  project list\n  project create --base-name NAME --template NAME\n  template list\n  session list\n  session start NAME\n  session switch UUID\n  session stop UUID\n  application list\n  --help | --version\n\n--json prints the exact API result or error object. It may also follow an API command.\nStart/switch/stop change logical state only; no applications are executed or closed.\n";
+pub const HELP: &str = "Session Manager (protocol 2)\n\nUsage: session-manager [--json] COMMAND\n  daemon\n  project list\n  project create --base-name NAME --template NAME\n  template list\n  session list\n  session start NAME\n  session switch UUID\n  session deactivate\n  session stop UUID\n  application list\n  --help | --version\n\n--json prints the exact API result or error object. It may also follow an API command.\nStart/switch/deactivate/stop change logical state only; no applications are executed or closed.\n";
 #[derive(Debug, PartialEq, Eq)]
 pub enum Action {
     Help,
@@ -75,6 +75,7 @@ pub fn parse(args: &[String]) -> Result<Invocation> {
                 ("project", "list", []) => Command::Projects,
                 ("template", "list", []) => Command::Templates,
                 ("session", "list", []) => Command::Sessions,
+                ("session", "deactivate", []) => Command::Deactivate,
                 ("application", "list", []) => Command::Applications,
                 ("session", "start", [name]) => Command::Start {
                     project_name: name.clone(),
