@@ -3,6 +3,8 @@
 - Status: Accepted
 - Date: 2026-07-16
 
+> Central profile/application-list ownership and the exclusion of installed-application discovery from the core are superseded by [ADR 0012](0012-discover-project-profiles-and-resolve-xdg-applications.md). The generic adapter/checkpoint and desktop-lifecycle separation remains in force.
+
 ## Context
 
 Session Manager's essential purpose is to manage reusable profiles, tasks, desktop-entry lists, logical workspace groups, and the lifecycle of named sessions. A session may be saved and resumed, but the concrete state required to do that belongs to the platform integration that created it.

@@ -3,6 +3,10 @@
 - Status: Accepted
 - Date: 2026-07-15
 
+> Profile/task storage, rename propagation, and deletion guards in this record are superseded by [ADR 0012](0012-discover-project-profiles-and-resolve-xdg-applications.md). Runtime and opaque checkpoint storage decisions remain historical accepted decisions.
+
+> Version 1 storage/API requirements are partially superseded by [ADR 0013](0013-isolate-version-two-state-and-gate-legacy-recovery.md). Version 2 is a clean break; old functionality and state usability are not requirements.
+
 ## Context
 
 Profiles and tasks are user-managed and benefit from a concise editable representation. Running and paused session metadata is machine-managed and must remain inspectable during recovery. Adapter checkpoint contents are also machine-managed, but ADR 0010 makes them opaque to the core.

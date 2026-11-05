@@ -2,24 +2,24 @@
 
 ## Purpose
 
-This document is the authoritative source for the user-visible, platform-independent behavior of Session Manager.
+This document is the authoritative source for the user-visible behavior of Session Manager. Project and application discovery follows Linux XDG conventions; session lifecycle and checkpoint contracts remain independent of a particular compositor or launcher.
 
-Session Manager organizes reusable work contexts. It records profiles, optional tasks, desktop-entry lists, logical workspace groups, named sessions, and resumable checkpoints. It does not implement a compositor, desktop shell, launcher, layout, keyboard shortcuts, window manager, or process manager.
+Session Manager discovers project folders, creates projects from templates, supplies current application lists, and manages independent logical sessions. Optional task presets and pause/resume are later additions. It does not implement a compositor, desktop shell, launcher, layout, keyboard shortcuts, window manager, or process manager.
 
 Concrete integrations may create workspaces, launch applications, preserve windows, suspend processes, or present the user interface. They do so as clients or adapters of Session Manager's generic contracts and remain responsible for their platform-specific behavior.
 
 ## Status
 
-This specification follows [ADR 0010](decisions/0010-keep-the-core-platform-independent-with-opaque-adapter-checkpoints.md). The platform-independent product contract is complete; concrete integrations may add behavior only outside the core contracts defined here.
+The project and application contract follows [ADR 0012](decisions/0012-discover-project-profiles-and-resolve-xdg-applications.md). The initial delivery covers projects, applications, and running sessions; tasks and pause/resume are later work. C1 implements project discovery/creation and running sessions, C2 implements current application resolution, and C3 exposes them through the owner-only API and CLI. The [initial release gate is accepted](reviews/c3-acceptance.md). The version 1 technical/API inventory describes the former central-profile model. M1/M2 acceptance records do not validate this revised contract.
 
 ## Product terminology
 
-- **Session profile:** a named, durable, user-managed work-context definition containing a root directory, a possibly empty desktop-entry list, and a possibly empty list of profile tasks. It contains no live desktop state.
-- **Profile task:** a named preset within a profile containing an ordered, unique list of desktop-entry IDs selected from its parent profile. It contains no window or workspace placement.
-- **Desktop-entry ID:** a reference to an application launch definition. Session Manager stores and exposes the ID; a client or adapter decides whether and how to resolve or launch it.
+- **Project/profile:** an immediate subdirectory of a configured project-source directory, named by that directory. The project directory itself is the source of current configuration; no configuration file is required for it to be recognized.
+- **Profile task:** a named optional preset defined under the project's `.session-manager/tasks/`, containing an ordered, unique selection of application desktop-entry IDs available to that project. It contains no window or workspace placement.
+- **Desktop-entry ID:** an application identifier used to merge installed and project-local `.desktop` entries. Session Manager resolves the list; clients decide whether and how to launch an entry.
 - **Logical workspace group:** the stable UUID-backed group represented by one session. The group has no core-visible members, slots, count, roles, or global/special variants. A client or adapter maps the session UUID to any concrete workspaces it owns.
-- **Launch source:** either a profile or one task within a profile.
-- **Session:** one numbered runtime instance created from a launch source.
+- **Launch source:** a currently discovered project or, when task support is delivered, a task in that project.
+- **Session:** one numbered runtime instance opened from a project or, later, a task. It keeps its identity and source name independently of the project directory; later contextual requests look up the current directory by name.
 - **Active session:** the single session selected as the current logical context. Activity is a core role, not proof that a desktop integration is currently displaying it.
 - **Running session:** a live logical session that has not committed a checkpoint as paused and has not stopped.
 - **Paused session:** a resumable session whose checkpoint has been durably accepted by Session Manager.
@@ -32,32 +32,27 @@ This specification follows [ADR 0010](decisions/0010-keep-the-core-platform-inde
 
 Running, paused, active, and stopped are not interchangeable. Switching the active session does not pause or stop the previous session.
 
-## Profiles and tasks
+## Projects and templates
 
-Users can create, inspect, modify, rename, and delete profiles.
+One configurable project-source directory contains profiles as immediate subdirectories. A project requires no metadata file; absent `.session-manager/`, `apps/`, or `tasks/` means no local overrides. Project names derive from directory names, not a central profile registry. The project directory is contextual data for clients; Session Manager does not change other processes' working directories. Discovery happens when listing projects for project creation and when starting a session, not through continuous watching. A start resolves the current directory and rejects a project name that no longer exists. Project creation copies a chosen template from `$XDG_CONFIG_HOME/session-manager/profile-template/<template-name>/` into a **new** directory in the project source. The initial shipped template is an empty `Default Profile`. If the requested base name is `Name`, creation chooses the first available `Name-1`, `Name-2`, etc.; it never merges with or overwrites an existing directory. Users rename, edit, and remove project directories themselves; Session Manager provides no profile rename/delete/edit operation. Template contents, including README.md, Notes.md, ToDo.md, AGENTS.md, Obsidian metadata, and `.session-manager/`, are user choices, not required schema or automatically created session fields. The project directory must not be confused with the template or with a fallback profile.
 
-A profile requires:
+## Applications
 
-- a unique non-empty name;
-- one root directory value;
-- a desktop-entry list, which may be empty;
-- a task list, which may be empty.
+At each application-list request, Session Manager discovers installed applications according to the Linux XDG desktop-entry conventions, removes IDs excluded by the project's `.session-manager/apps/` exclusion list, then applies `.desktop` files in `.session-manager/apps/` by desktop-entry ID, replacing an installed entry of the same ID and allowing a local entry to reintroduce an excluded ID. A project without local application settings sees all eligible installed applications. The result, not a frozen list from session start, is exposed through a launcher-independent API; a client chooses how to display or launch it. A Firefox-specific command or profile can be expressed by the project's own `.desktop` file; the core has no Firefox field. Installed-app discovery is part of Session Manager's Linux integration, not a launcher-specific plugin. If the active session's recorded project name does not resolve to a current directory, the application list falls back to eligible installed applications with no project overrides. If a new directory later takes the same name, subsequent lookups use that new directory.
 
-Each task requires a name unique within its profile and an ordered, unique desktop-entry list whose entries must also exist in the parent profile. The list may be empty. A task cannot contain workspace destinations, window declarations, compositor identifiers, coordinates, layout state, shell widgets, keyboard shortcuts, process IDs, or platform commands.
+## Tasks (later delivery)
 
-The root directory is contextual data made available to clients and adapters. Session Manager does not assume that every application supports it and does not itself change another process's working directory.
+Tasks retain their existing meaning: optional named presets selecting ordered unique desktop-entry IDs available to their parent project, without window placement. When task support is delivered, task definitions are loaded from `.session-manager/tasks/` when starting a task, rather than kept in a central profile configuration. Multiple independent sessions may be opened from the same project or task. The initial project/session delivery omits task functionality and ignores task-definition files; a later delivery adds task discovery, launch, and validation. Switching sessions does not reload project or task definitions.
 
-The profile desktop-entry list expresses applications available in its context. A task list expresses the applications suggested by that preset. Session Manager does not resolve or execute them; clients decide whether and how to launch them after observing a new session.
+## Independence of open sessions
 
-Every session is itself one logical workspace group. Fixed counts, numbered slots, special workspaces, global workspaces, task window destinations, and concrete membership are downstream desktop policy and never profile or task fields.
+An open session retains its UUID, name, recorded project/task names, number, lifecycle, and any checkpoint when a project directory is renamed, removed, or replaced. The old name ceases to be a launchable project; the new name becomes launchable independently. No rename propagation, deletion guard, or strict live link to the filesystem exists. A new directory with the old name may supply settings for that existing session's future context-dependent requests. A missing project does not prevent switch or core-only stop. A paused session resumes from its checkpoint via the producing adapter, never by reconstructing a project from its current directory; project-specific behavior after resume can use the current name lookup or report missing context. Project edits never rewrite an accepted checkpoint.
 
-Profile and task edits affect future starts. They do not rewrite an accepted checkpoint. Renaming is the sole live presentation exception: a supported profile or task rename updates the source label and generated name of every related running or paused session while preserving its UUID, number, source association, lifecycle, and checkpoint bytes.
-
-A task cannot be deleted while referenced by a running or paused session. A profile cannot be deleted while it or one of its tasks is so referenced. Submitting the explicit profile/task delete API request is the confirmation; interactive clients may ask the user before submitting it, but the protocol has no separate confirmation or force flag. Deletion never instructs an adapter to destroy external state implicitly.
+Every session remains one logical workspace group. Fixed counts, numbered slots, special workspaces, concrete membership, focus, and window placement remain downstream desktop policy.
 
 ## Session identity and naming
 
-A profile and each of its tasks are distinct launch sources. Multiple running or paused sessions may share one source.
+A project and (in the later task delivery) each of its tasks are distinct named launch sources. Multiple running or paused sessions may have the same source name; this is not a persistent link to the current project directory.
 
 Names are generated automatically:
 
@@ -70,141 +65,37 @@ Examples include `FDS-1`, `FDS-MontageVidéo-1`, `FDS-MontageVidéo-2`, `FDS-Min
 
 If a session stops, its number no longer participates. If `QMK-1` is the only live `QMK` session and stops, the next `QMK` start is again `QMK-1`. If `QMK-2` remains running or paused, the next is `QMK-3`.
 
-Renaming a profile updates the profile segment of all related running and paused sessions. Renaming a task updates only sessions from that task. The operation is rejected before mutation if any resulting profile key, task key, or generated live name would collide.
+Renaming a project or task definition on disk does not rename any running or paused session. Existing live numbers and generated names remain reserved; a start under a newly discovered name must still reject any generated live-name collision without rewriting existing sessions.
 
-## Lifecycle model
+## Session lifecycle
 
-The persisted lifecycle is:
+The initial delivery supports **start**, **switch**, and **stop**. Starting a currently existing project records its name without storing a project-path link or copying project settings; it creates a running session and makes it active. Switching changes the active logical context; it does not pause or stop the previous session. Stopping removes the logical session but does not close windows, terminate applications, or delete a project directory. At most one running session is active; having none is valid. These operations do not invoke an adapter or manipulate the desktop. Clients decide how to present the active session.
 
-- **Running:** the core session exists and has not been paused or stopped.
-- **Paused:** the core has durably committed one checkpoint envelope and payload accepted from the selected adapter.
-- **Stopped:** the runtime instance and checkpoint are removed after successful completion and the instance no longer participates in naming.
+Later pause/resume support may add **paused** sessions with adapter-owned checkpoints. A session becomes paused only after a valid checkpoint is stored. Resume gives the unchanged checkpoint only to its compatible producing adapter and makes the session running and active only after a verified completion; it never reconstructs the checkpoint from current project files. A failed or uncertain adapter action cannot be reported as successful. Stopping a paused session discards its checkpoint only after any required adapter cleanup succeeds. Missing or incompatible adapters, uncertain outcomes, and interrupted operations remain visible rather than being guessed away. The core stores checkpoint bytes without interpreting them; concrete restoration belongs to the adapter. The exact compatibility, recovery, integrity, and privacy rules belong to the [technical specification](technical-specification.md) and must be revised for the later delivery before they are implemented.
 
-At most one running session is active. Paused sessions are inactive. No active session is a valid state.
-
-Adapter capability and outcome qualify what an operation achieved externally. They do not create hidden lifecycle states. A partial, unsupported, failed, or indeterminate adapter result must be visible and must not be translated into a stronger lifecycle claim.
-
-## Lifecycle operations
-
-A lifecycle request is admitted only after its syntax, authorization, preconditions, referenced source or session, lifecycle guards, required adapter compatibility, generated-name availability, and capacity have been validated. A rejection at that boundary is a synchronous error and creates no public operation. Once admitted, the operation identity and the authority needed to recover it are committed atomically before any adapter effect; core-only operations commit their final public operation together with their lifecycle change.
-
-### Start
-
-Starting a profile or task reserves a number, snapshots the source identity and relevant platform-independent configuration, creates a running session, and makes it active.
-
-Start is a core-only operation. Session Manager does not invoke an adapter, create compositor workspaces, launch `.desktop` files, place windows, focus a surface, or create process groups. After the committed session event, clients may map the session UUID to workspaces and may use the source snapshot's desktop-entry IDs and root directory according to their own policy.
-
-Starting never resumes a stopped instance or reuses a discarded checkpoint. Starting the same source again creates a distinct session with a separate UUID and live number.
-
-### Switch
-
-Switch selects an existing running session as the active logical context. The previously active session remains running. Session Manager publishes the new active identity; clients decide how that affects their own UI, compositor state, launcher, or shortcuts.
-
-Switch never invokes an adapter or platform-specific navigation API. A failed downstream presentation change does not silently rewrite core lifecycle state.
-
-### Pause
-
-Pause requires a selected compatible adapter with `checkpoint.capture`. The core commits `paused` only after it has durably stored a valid envelope and the exact payload bytes from a completed capture.
-
-Version 1 does not let the caller choose a checkpoint format. Before capture, the selected adapter must advertise at least one format/version usable for both capture and restore. The adapter then chooses such a format, and the core rejects a completed proposal outside both advertised ranges. If adapter discard is declared necessary, that same format must also be advertised for discard; live preservation always requires adapter discard. The choice is stable for the operation UUID and must be reproduced exactly during recovery. A format-independent capability is represented by an empty format list.
-
-The capture result declares `preservation = snapshot` or `preservation = live`, and `activity = unchanged` or `activity = suspended`. An adapter may report `suspended` only when it also declares `session.suspend` and verifies suspension. These qualifiers are retained and shown to clients. Core `paused` means only that a resumable checkpoint is stored; it never implies suspended processes or exact restoration.
-
-If capture is unsupported, rejected, fails, is cancelled, or returns an invalid format/capability proposal, the session remains running. An invalid accepted completion is exposed as a protocol-invalid attention condition rather than being promoted to paused. A terminal result after acceptance still requires adapter-record release. A timeout or disconnect after complete request handoff but before observed acceptance is acceptance-unknown; after known acceptance it is indeterminate. In both cases the session remains running with a pending recovery condition until adapter status resolves. No checkpoint candidate becomes authoritative merely because bytes were partially received.
-
-### Resume
-
-Resume applies to a paused session. Session Manager verifies the checkpoint envelope and payload integrity and offers the unchanged payload only to a directly compatible adapter. The adapter owns interpretation, restoration, and verification. Version 1 performs no checkpoint migration; future migration remains adapter-owned and requires a new core contract.
-
-`checkpoint.restore` is required. A completed restore changes the session to running and makes it active. A completed restore with limitations also changes it to running and active but retains an attention condition and the adapter's restoration qualifier. Unsupported, rejected, failed, or cancelled restore, whether before or after acceptance, leaves the session paused; a terminal result after acceptance still requires adapter-record release. An acceptance-unknown or indeterminate restore leaves it paused and recovery-required until status resolves. The core never falls back to the current profile definition, chooses another adapter, or claims exact restoration without adapter verification.
-
-Profile or task edits made after capture do not modify the retained checkpoint and do not affect that resume.
-
-### Stop
-
-Stopping a running session is a core-only operation: it removes the logical session and does not close windows, remove workspaces, or terminate applications. Downstream clients are responsible for any external cleanup they choose.
-
-Stopping a paused session examines its envelope. When `discard_requires_adapter = false`, the core atomically removes the checkpoint and session without invoking the adapter. When it is true, the producing compatible adapter must support `checkpoint.discard` and report completion before core deletion. Session Manager never invents cleanup steps or interprets the payload.
-
-Unsupported, rejected, failed, acceptance-unknown, or indeterminate required discard retains the paused session and checkpoint with an attention condition. A later explicit stop may begin a new discard only when no unresolved prior discard exists and after a fresh compatibility check; automatic recovery queries status for delivered unresolved operations and never repeats discard.
-
-After a completed stop, a later start uses the profile or task definition and the current numbering set; it does not restore the stopped checkpoint.
-
-### Recovery
-
-Recovery validates core configuration, runtime state, checkpoint envelope metadata, payload length and integrity, pending operations, and available adapter compatibility. It queries adapter operation status by the core operation UUID that was persisted before invocation. An optional opaque adapter token may improve diagnostics or correlation but is never required for recovery.
-
-When a completed capture must be recovered after transport loss, the adapter re-exports the exact retained payload and proposal through a fresh core-owned descriptor. The core commits only a complete pair that passes the same bounds, proposal, length, and digest checks as the original capture. Missing, partial, or changed recovery data remains indeterminate and never becomes a paused checkpoint.
-
-Adapters retain accepted and terminal operation recovery records without age-based expiry. A terminal core commit for an operation known to have been accepted creates a durable release obligation, including when the terminal outcome leaves lifecycle unchanged; only afterward does the core explicitly release the adapter record and durably clear that obligation. Pre-acceptance outcomes create no release obligation. A crash before release completion causes an idempotent retry.
-
-After a complete mutating request has been delivered, a timeout or disconnect without observed acceptance is not treated as safe cancellation: the core sends no termination signal, records acceptance-unknown, and reconciles status. If status reports the operation absent, the core can conclude that the adapter never accepted it only after the daemon that spawned the exact original process has reaped it and durably recorded that proof. A later daemon may trust the committed proof; without it, absence is non-authoritative and the intent remains recovery-required. Losing a status record for a still-pending lifecycle intent after acceptance is instead a protocol violation and leaves durable attention rather than authorizing replay. Once the terminal core commit has replaced that intent with a release obligation, recovery invokes only idempotent release; `released: true`, including for an already absent record, completes the obligation without a status query.
-
-Recovery never parses checkpoint contents, selects a substitute adapter, or blindly repeats a non-idempotent request. An unverifiable result remains visible as attention-required, acceptance-unknown, or indeterminate rather than being reported as completed. Version 1 has no force, assume-failed, forget, replay, or manual resolution command. After an administrator repairs or compatibly upgrades an adapter externally, automatic safe status/release reconciliation can make progress; acknowledgement changes presentation only.
-
-## Checkpoint guarantees
-
-For every accepted checkpoint, Session Manager guarantees:
-
-- the envelope identifies the adapter and checkpoint format;
-- stored payload bytes are returned unchanged;
-- integrity and configured bounds are checked without semantic parsing;
-- core logs and ordinary inspection do not expose payload contents;
-- only a compatible adapter receives the payload for resume or required discard;
-- stopped-session cleanup follows the defined retention policy;
-- missing or incompatible adapters produce explicit outcomes.
-
-Session Manager does not guarantee that a checkpoint is portable, human-readable, editable, or restorable without its producing adapter. The adapter must state any stronger guarantee.
+Neither switching nor resuming requires the original project directory to exist. Project-dependent requests use the current directory matching the recorded name; application listing falls back to installed applications when it is absent.
 
 ## Public integration behavior
 
-The public API exposes platform-independent data:
+The Session Manager API lets clients discover available projects and templates, create a project, start/switch/stop sessions, inspect the active session, and request the **current** application list for it. There is no profile edit, rename, or delete API and no automatic profile synchronization. The list is computed when requested, including when there is no active session (installed applications only). Clients may use it to present a launcher; Session Manager does not display a launcher, launch applications, control windows, or choose keyboard shortcuts.
 
-- profiles, tasks, roots, ordered desktop-entry IDs, and the fact that each session is one logical workspace group;
-- session UUID, generated name, source, number, lifecycle, and active role;
-- checkpoint ID, adapter ID, format ID/version, creation time, payload length, preservation/activity qualifiers, and discard requirement, never the internal integrity digest or payload semantics;
-- adapter ID/display name, protocol version, availability, format compatibility, and the independent `checkpoint.capture`, `session.suspend`, `checkpoint.restore`, and `checkpoint.discard` capabilities;
-- pending operations, stable errors, and attention conditions.
+The later task delivery adds task discovery and task-based start. A later pause/resume delivery adds checkpoint and adapter status inspection with truthful outcomes. Those features are not required to use projects, sessions, or the application list.
 
-Clients own presentation, search, icons, keyboard bindings, workspace navigation, window lists, application execution, and platform-specific status. Session Manager must remain useful with no graphical client installed.
+The API exposes project names and paths, session UUIDs, generated names and active state, and resolved applications; it does not expose a frozen project configuration inside a session. It stays independent of any particular compositor, launcher UI, browser, or workspace scheme. Session Manager remains useful without a graphical client.
 
-The public integration surface also exposes the accepted adapter-registry source ETag, a separate adapter-generation revision, and an explicit atomic registry reload operation. External registry edits are not watched or adopted implicitly. Reload cannot replace or remove an adapter referenced by any pending lifecycle intent, accepted or indeterminate operation, or outstanding release obligation.
+## Delivery scope
 
-## Adapter capability vocabulary
+The initial project/session delivery includes:
 
-An adapter capability is not inferred from its name or checkpoint formats. Compatibility inspection, operation status, and idempotent operation release are mandatory protocol behavior rather than optional capabilities. `checkpoint.capture`, `session.suspend`, `checkpoint.restore`, and `checkpoint.discard` are independent booleans qualified by supported checkpoint format ranges. Version 1 defines no adapter start, switch, window, launcher, or process-control capability.
-
-## Failure behavior
-
-Operations distinguish at least:
-
-- invalid configuration or request;
-- stale configuration or runtime precondition;
-- unavailable or incompatible adapter;
-- unsupported capability;
-- invalid or corrupt checkpoint envelope or payload integrity;
-- adapter-declared failure;
-- safely proven timeout/cancellation before acceptance;
-- acceptance-unknown after complete request handoff;
-- accepted operation with indeterminate external outcome;
-- persistence or recovery failure.
-
-Client timeout does not cancel or signal a handed-off lifecycle operation, whether acceptance is unknown or known. Human-readable messages may explain stable machine-readable codes but do not replace them.
-
-## First-version scope
-
-The first version includes:
-
-- profile and task CRUD;
-- root and desktop-entry lists;
-- session naming, numbering, active role, and lifecycle;
-- generic local CLI and API;
-- explicitly configured subprocess-adapter discovery and compatibility;
-- opaque checkpoint capture, storage, resume handoff, discard, and recovery;
-- distinct application fake-port, fake-subprocess, sample-adapter, and adapter-conformance testing;
+- configured project source, project discovery and template-based creation (not profile edit/rename/delete);
+- Linux XDG application discovery, per-project exclusions and `.desktop` overrides, and a current application-list API;
+- session naming, numbering, active role, core-only start, switch, and stop;
+- generic local CLI and API for those operations and current application listing;
 - crash-safe core persistence and privacy-safe diagnostics.
 
-The first version does not require:
+A later task delivery adds task discovery and task-based starts; task files are ignored in the initial delivery. A separate later lifecycle delivery may add pause/resume, explicitly configured subprocess-adapter discovery, opaque checkpoint capture/storage/handoff/discard/recovery, and the corresponding fake-port, fake-subprocess, sample-adapter, and conformance testing. The lifecycle and checkpoint sections above describe that target, not initial-delivery acceptance.
+
+Neither the initial delivery nor the later generic lifecycle target requires:
 
 - a built-in concrete platform, shell, launcher, layout, process, or service-manager integration;
 - a built-in compositor, shell, launcher, or process adapter;
@@ -219,12 +110,12 @@ The first version does not require:
 
 ## Functional acceptance
 
-The MVP is functionally accepted when:
+The initial delivery is functionally accepted when:
 
-1. users can manage valid profiles and tasks without any desktop component installed;
-2. concurrent sessions follow the documented identity, naming, numbering, rename, and deletion rules;
-3. start, switch, pause, resume, stop, and recovery expose truthful core and adapter outcomes;
-4. opaque payload bytes survive storage, daemon restart, and adapter handoff unchanged;
-5. an incompatible or missing adapter cannot receive or reinterpret a checkpoint;
-6. clients can build integrations from the generic API without platform-specific core methods;
-7. the complete default test suite cannot discover or mutate the live desktop.
+1. projects can be discovered and created from templates without a launcher or compositor;
+2. an application query reflects the installed and current project entries, exclusions, overrides, and missing-project fallback without requiring a graphical client;
+3. multiple sessions follow the documented naming, numbering, and independence from project-directory edits, while start, switch, and stop report truthful logical outcomes;
+4. a client can obtain the active session and application list without compositor- or launcher-specific core methods;
+5. default tests cannot discover or mutate the live desktop.
+
+Later task support must preserve the specified preset semantics. Later pause/resume support must preserve opaque checkpoint bytes across storage and adapter handoff, reject incompatible adapters before handoff, and report uncertain outcomes truthfully; those features are not conditions for accepting the initial delivery.

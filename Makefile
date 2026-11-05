@@ -1,4 +1,4 @@
-.PHONY: fmt fmt-check lint build docs test check
+.PHONY: fmt fmt-check lint build docs test test-isolated check check-isolated
 
 fmt:
 	cargo fmt --all
@@ -17,5 +17,11 @@ docs:
 
 test:
 	cargo test --all-targets --all-features
+
+test-isolated:
+	bash tools/test-isolated.sh
+
+check-isolated:
+	bash tools/check-isolated.sh
 
 check: fmt-check lint build docs test

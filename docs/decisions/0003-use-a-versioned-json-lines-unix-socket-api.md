@@ -3,6 +3,8 @@
 - Status: Accepted
 - Date: 2026-07-15
 
+> Version 1 storage/API requirements are partially superseded by [ADR 0013](0013-isolate-version-two-state-and-gate-legacy-recovery.md). Version 2 is a clean break; old functionality and state usability are not requirements.
+
 ## Context
 
 Session Manager needs one local authority for configuration and lifecycle mutations while supporting command-line clients, arbitrary local integrations, adapter coordination, queries, and continuous state updates.
